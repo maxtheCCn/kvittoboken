@@ -78,6 +78,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .hist-link .chev{color:var(--muted)}
 .list-head{display:flex;justify-content:space-between;align-items:baseline;padding-inline:4px;margin-bottom:-10px}
 .view{display:flex;flex-direction:column;gap:22px}
+/* Utläggssidan står still: sidan scrollar inte, bara listan om den blir lång */
+html.lock,html.lock body{height:100%;overflow:hidden;overscroll-behavior:none}
+html.lock body{position:fixed;inset:0;width:100%;padding-top:calc(20px + env(safe-area-inset-top,0px));touch-action:none}
+html.lock .wrap{height:100%}
+html.lock #view-hem{height:100%}
+html.lock #list{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none;margin-inline:-4px;padding-inline:4px;padding-top:6px;margin-top:-6px;padding-bottom:8px;-webkit-mask-image:linear-gradient(transparent,#000 10px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(transparent,#000 10px,#000 calc(100% - 18px),transparent)}
+html.lock #list::-webkit-scrollbar{display:none}
 .view[hidden]{display:none}
 
 /* ---------- Hem ---------- */
@@ -563,6 +570,7 @@ function showView(v){
   if (changed && !document.body.classList.contains("intro")) {
     const el = $("#view-"+v); void el.offsetWidth; el.classList.add("enter");
   }
+  document.documentElement.classList.toggle("lock", v === "hem");
   document.querySelectorAll(".bar-item").forEach(b => b.removeAttribute("aria-current"));
   const special = v === "ny" && (editingId || pendingThumb);
   if (!special) $(NAV[v])?.setAttribute("aria-current","page");
@@ -986,7 +994,7 @@ document.querySelectorAll("#periodSeg button").forEach(b => b.addEventListener("
   renderSummary(true);
 }));
 $("#shareBtn").addEventListener("click", () => go("sammanstall"));
-$("#homeBtn").addEventListener("click", () => { if (view === "hem") window.scrollTo({top:0,behavior:"smooth"}); else go("hem"); });
+$("#homeBtn").addEventListener("click", () => { if (view === "hem") $("#list").scrollTo({top:0,behavior:"smooth"}); else go("hem"); });
 $("#closeShare").addEventListener("click", () => go("hem"));
 $("#historyBtn").addEventListener("click", () => go("historik"));
 $("#closeHistory").addEventListener("click", () => go("sammanstall"));
