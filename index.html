@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F5F7F6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kvittoboken">
+<meta name="description" content="Skanna kvitton och håll koll på utlägg.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Kvittoboken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: en smal mobilkolumn. Hem = saldokort, kategorifördelning, kvittolista per månad. Varje knapp i bottenmenyn = egen sida. Ljust tema med avsikt. */
+:root{
+  --paper:#F5F7F6;
+  --surface:#FFFFFF;
+  --ink:#1B2220;
+  --ink-2:#3C4744;
+  --muted:#76827E;
+  --line:#E4E9E7;
+  --line-2:#EEF2F0;
+  --accent:#2F6B5C;
+  --accent-ink:#245447;
+  --accent-soft:#E6F0EC;
+  --owed:#94590F;
+  --owed-soft:#FBF0E1;
+  --danger:#A3352B;
+  --danger-soft:#FBEAE8;
+  --c-mat:#3F7D5E;      --c-mat-bg:#E7F2EC;
+  --c-hush:#3E6A92;     --c-hush-bg:#E7EFF7;
+  --c-apo:#B0473C;      --c-apo-bg:#FAEAE7;
+  --c-tra:#A06A16;      --c-tra-bg:#FAF0DF;
+  --c-pre:#7A4F95;      --c-pre-bg:#F1EAF6;
+  --c-ovr:#6E7A76;      --c-ovr-bg:#EDF0EF;
+  --display:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent}
+body{background:var(--paper);color:var(--ink);font-family:var(--display);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:20px calc(124px + env(safe-area-inset-bottom,0px));-webkit-font-smoothing:antialiased}
+.wrap{max-width:520px;margin:0 auto}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0}
+.label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:13px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;transition:background .15s,border-color .15s,transform .1s}
+.btn:hover{border-color:#CBD4D1}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.ghost-danger{color:var(--danger);background:none;border-color:transparent}
+.btn.ghost-danger:hover{background:var(--danger-soft)}
+.btn[disabled]{opacity:.55;pointer-events:none}
+
+.hist-sum{display:flex;flex-direction:column;gap:6px;padding:18px 20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.hist-amount{font-size:2rem;font-weight:500;letter-spacing:-.03em;line-height:1.1;color:var(--accent)}
+.hist-amount small{font-family:var(--display);font-size:.5em;color:var(--muted);font-weight:500;letter-spacing:0}
+.note{font-size:.82rem;color:var(--muted)}
+.hist-link{margin-top:10px;display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;transition:background .12s}
+.hist-link:hover{background:#FAFBFB}
+.hl-ico{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.hl-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.hl-text b{font-weight:600}
+.hl-text small{font-size:.8rem;color:var(--muted)}
+.hist-link .chev{color:var(--muted)}
+.list-head{display:flex;justify-content:space-between;align-items:baseline;padding-inline:4px;margin-bottom:-10px}
+.view{display:flex;flex-direction:column;gap:22px}
+.view[hidden]{display:none}
+
+/* ---------- Hem ---------- */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding-top:6px}
+.top h1{font-size:1.7rem;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.top .date{font-size:.8rem;color:var(--muted);margin-bottom:4px;display:block}
+.top .date::first-letter{text-transform:uppercase}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);white-space:nowrap;padding-bottom:6px}
+.sync::before{content:"";width:6px;height:6px;border-radius:50%;background:#C4CCC9}
+.sync.ok::before{background:#3E9A72}
+.sync.err::before{background:var(--danger)}
+
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);position:relative;box-shadow:0 1px 2px rgba(27,34,32,.03),0 14px 34px -20px rgba(27,34,32,.16)}
+.hero-main{padding:22px 20px 20px;display:flex;flex-direction:column;gap:16px}
+.perf{position:relative;margin:0 16px;border-top:1.5px dashed #DCE3E0}
+.perf::before,.perf::after{content:"";position:absolute;top:-11px;width:22px;height:22px;border-radius:50%;background:var(--paper);border:1px solid var(--line)}
+.perf::before{left:-28px;clip-path:inset(0 0 0 50%)}
+.perf::after{right:-28px;clip-path:inset(0 50% 0 0)}
+.hero-note{padding:13px 20px 15px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:46px}
+.hero-note b{color:var(--ink-2);font-weight:500}
+.hero-note .dotsep{width:3px;height:3px;border-radius:50%;background:#C4CCC9;flex:none}
+.hero-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.chip{font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--owed-soft);color:var(--owed);white-space:nowrap}
+.chip.ok{background:var(--accent-soft);color:var(--accent)}
+.amount{font-family:var(--mono);font-weight:500;font-size:clamp(2.4rem,11vw,3.1rem);letter-spacing:-.04em;line-height:1;display:flex;align-items:baseline;font-variant-numeric:tabular-nums}
+.amount .ore{color:var(--muted);font-size:.5em;letter-spacing:-.02em}
+.amount .kr{margin-left:10px;font-family:var(--display);font-size:.36em;color:var(--muted);font-weight:500;letter-spacing:0}
+.progress{height:6px;border-radius:99px;background:var(--line-2);overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);border-radius:99px;width:0;transition:width .6s cubic-bezier(.3,.7,.2,1)}
+.hero-foot{display:flex;justify-content:space-between;gap:12px;font-size:.82rem;color:var(--muted);flex-wrap:wrap}
+.hero-foot b{color:var(--ink-2);font-weight:500}
+
+.cats{display:flex;flex-direction:column;gap:12px}
+.cats-head{display:flex;justify-content:space-between;align-items:baseline}
+.stack{display:flex;height:10px;border-radius:99px;overflow:hidden;gap:2px;background:var(--line-2)}
+.stack span{height:100%;transition:flex-grow .5s ease}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--ink-2)}
+.legend i{width:8px;height:8px;border-radius:3px;flex:none}
+.legend .num{color:var(--muted);font-size:.76rem}
+
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:#E9EEEC;border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:9px;padding:8px 6px;font-size:.84rem;font-weight:500;color:var(--muted);display:flex;justify-content:center;align-items:center;gap:6px;transition:background .15s,color .15s}
+.seg button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(27,34,32,.1)}
+.seg .c{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+
+.list{display:flex;flex-direction:column;gap:18px}
+.group{display:flex;flex-direction:column;gap:8px}
+.group-head{display:flex;justify-content:space-between;align-items:baseline;padding-inline:4px}
+.group-head .num{font-size:.76rem;color:var(--muted)}
+.card-list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.row{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:13px 12px 13px 14px;cursor:pointer;transition:background .12s;position:relative;overflow:hidden}
+.row.collapse{transition:height .32s cubic-bezier(.3,.7,.2,1),opacity .25s,padding .32s;opacity:0;padding-block:0}
+.row:active{background:#F4F7F6}
+.row + .row::before{content:"";position:absolute;top:0;left:66px;right:0;border-top:1px solid var(--line-2)}
+.row:hover{background:#FAFBFB}
+.ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;overflow:hidden}
+.ico img{width:100%;height:100%;object-fit:cover}
+.ico svg.i{width:19px;height:19px}
+.meta{min-width:0;display:flex;flex-direction:column;gap:1px}
+.store{font-weight:600;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amt{text-align:right;white-space:nowrap}
+.amt .num{font-size:.95rem;font-weight:500;letter-spacing:-.01em}
+.amt small{font-size:.72rem;color:var(--muted);margin-left:3px;font-family:var(--display)}
+.check{width:32px;height:32px;border-radius:50%;border:1.5px solid #CFD8D5;background:var(--surface);display:grid;place-items:center;padding:0;color:transparent;transition:background .2s,border-color .2s,color .2s,transform .15s;flex:none}
+.check svg.i{width:16px;height:16px;stroke-width:2.4}
+.check:hover{border-color:var(--accent);color:#B9CFC8}
+.check:active{transform:scale(.88)}
+.check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.check.on svg path{stroke-dasharray:20;stroke-dashoffset:0;animation:tick .3s ease both}
+@keyframes tick{from{stroke-dashoffset:20}}
+.pill{border:0;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.pill.owed{background:var(--owed-soft);color:var(--owed)}
+.pill.paid{background:var(--accent-soft);color:var(--accent)}
+.row.is-paid .amt .num{color:var(--muted)}
+
+.empty{background:var(--surface);border:1px dashed #D3DBD8;border-radius:var(--r-md);padding:32px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:6px;align-items:center}
+.empty strong{color:var(--ink);font-weight:600}
+.empty .mini{width:44px;height:56px;border:1.5px solid #CBD4D1;border-bottom:0;border-radius:4px 4px 0 0;margin-bottom:8px;position:relative;background:linear-gradient(var(--line) 0 0) 9px 14px/22px 2px no-repeat,linear-gradient(var(--line) 0 0) 9px 22px/16px 2px no-repeat,linear-gradient(var(--accent) 0 0) 19px 38px/14px 3px no-repeat}
+.empty .mini::after{content:"";position:absolute;left:-1.5px;right:-1.5px;bottom:-5px;height:6px;background:linear-gradient(135deg,transparent 3px,#CBD4D1 3px 4.5px,transparent 4.5px) 0 0/8px 6px,linear-gradient(225deg,transparent 3px,#CBD4D1 3px 4.5px,transparent 4.5px) 0 0/8px 6px}
+
+/* ---------- Undersidor ---------- */
+.page-head{display:flex;align-items:center;gap:6px;margin-left:-8px;padding-top:2px}
+.page-head h1{font-size:1.4rem;font-weight:700;letter-spacing:-.015em}
+.back{width:42px;height:42px;padding:0;border-radius:50%;border:0;background:none;display:grid;place-items:center}
+.back:hover{background:#E9EEEC}
+.back svg.i{width:22px;height:22px}
+
+.amount-field{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0 6px}
+.amount-input{display:flex;align-items:baseline;justify-content:center;gap:8px;max-width:100%}
+.amount-input input{font-family:var(--mono);font-size:clamp(2.4rem,12vw,3.2rem);font-weight:500;letter-spacing:-.04em;border:0;background:none;text-align:right;width:6.2ch;padding:0;color:var(--ink);font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.amount-input input::-webkit-outer-spin-button,.amount-input input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.amount-input input::placeholder{color:#C3CCC9}
+.amount-input input:focus{outline:none}
+.amount-input .kr{font-size:1.2rem;color:var(--muted);font-weight:500}
+.amount-field .underline{width:150px;height:2px;border-radius:2px;background:var(--line)}
+.amount-field:focus-within .underline{background:var(--accent)}
+
+.scan-card{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
+.scan-card img{width:56px;height:74px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none}
+.scan-card .status{flex:1;min-width:0;font-size:.86rem;color:var(--ink-2);display:flex;flex-direction:column;gap:3px}
+.scan-card .status small{color:var(--muted);font-size:.78rem}
+.scan-card[hidden]{display:none}
+.spinner{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:-2px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.group-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.f{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:12px;padding:4px 16px;min-height:52px}
+.f + .f{border-top:1px solid var(--line-2)}
+.f label,.f .flabel{font-size:.86rem;color:var(--muted)}
+.f input,.f textarea{font:inherit;border:0;background:none;color:var(--ink);padding:12px 0;width:100%;min-width:0}
+.f input:focus,.f textarea:focus{outline:none}
+.f:focus-within{background:#FBFCFC}
+.f textarea{resize:none;min-height:52px}
+.f.top{align-items:start}
+.f.top label{padding-top:12px}
+
+.section-label{padding-inline:4px;margin-bottom:-12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips input{position:absolute;opacity:0;pointer-events:none}
+.chips label{display:inline-flex;align-items:center;gap:7px;padding:8px 12px 8px 9px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:.86rem;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.chips label .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center}
+.chips label .dot svg.i{width:13px;height:13px;stroke-width:2}
+.chips input:checked + label{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.chips input:focus-visible + label{outline:2px solid var(--accent);outline-offset:2px}
+
+.toggle{display:grid;grid-template-columns:1fr 1fr;background:#E9EEEC;border-radius:12px;padding:3px;gap:2px}
+.toggle input{position:absolute;opacity:0;pointer-events:none}
+.toggle label{text-align:center;padding:10px;border-radius:9px;font-size:.88rem;font-weight:500;color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
+.toggle input:checked + label{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(27,34,32,.1)}
+.toggle input#stOwed:checked + label{color:var(--owed)}
+.toggle input#stPaid:checked + label{color:var(--accent)}
+.toggle input:focus-visible + label{outline:2px solid var(--accent);outline-offset:1px}
+
+.error{color:var(--danger);font-size:.86rem;background:var(--danger-soft);padding:10px 12px;border-radius:var(--r-sm)}
+.error[hidden]{display:none}
+.form-actions{display:flex;gap:10px;align-items:center}
+.form-actions .primary{flex:1}
+
+/* Sammanställning: ett kvitto skrivs ut ur en skrivare */
+.lead{color:var(--muted);font-size:.9rem;margin-top:-10px}
+.printer{display:flex;flex-direction:column;align-items:center;padding-top:2px}
+.printer .mouth{width:calc(100% - 8px);max-width:384px;height:10px;border-radius:6px;background:var(--ink);position:relative;z-index:2;box-shadow:inset 0 -3px 0 rgba(255,255,255,.08)}
+.printer .feed{width:100%;max-width:360px;overflow:hidden;margin-top:-5px;padding:0 8px 26px}
+.slip{background:var(--surface);padding:30px 22px 34px;font-family:var(--mono);font-size:.78rem;color:var(--ink-2);box-shadow:0 1px 2px rgba(27,34,32,.05),0 20px 40px -22px rgba(27,34,32,.25);clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),95% 100%,90% calc(100% - 8px),85% 100%,80% calc(100% - 8px),75% 100%,70% calc(100% - 8px),65% 100%,60% calc(100% - 8px),55% 100%,50% calc(100% - 8px),45% 100%,40% calc(100% - 8px),35% 100%,30% calc(100% - 8px),25% 100%,20% calc(100% - 8px),15% 100%,10% calc(100% - 8px),5% 100%,0 calc(100% - 8px));display:flex;flex-direction:column;gap:12px;position:relative;background-image:linear-gradient(rgba(27,34,32,.035),transparent 18px)}
+.slip.printing{animation:slipPrint .9s cubic-bezier(.35,.75,.25,1) both}
+@keyframes slipPrint{from{transform:translateY(-100%)}}
+.slip .brand{font-family:var(--display);font-weight:700;font-size:1.05rem;text-align:center;letter-spacing:.02em;color:var(--ink)}
+.slip .center{text-align:center;color:var(--muted);font-size:.72rem;line-height:1.5}
+.slip .center b{color:var(--ink-2);font-weight:500;text-transform:uppercase;letter-spacing:.08em}
+.slip hr{border:0;border-top:1px dashed #C9D1CE;margin:0;width:100%}
+.slip hr.double{border-top:3px double #C9D1CE}
+.slip .cols{display:flex;justify-content:space-between;font-size:.66rem;letter-spacing:.1em;color:var(--muted)}
+.slip ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.slip li{display:flex;flex-direction:column;gap:1px}
+.slip .line{display:flex;gap:6px;align-items:baseline}
+.slip .line .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:500}
+.slip .line .dots{flex:1;border-bottom:1px dotted #C9D1CE;transform:translateY(-4px);min-width:12px}
+.slip .d{font-size:.68rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slip .kv{display:flex;justify-content:space-between;color:var(--muted);font-size:.74rem}
+.slip .tot{display:flex;justify-content:space-between;align-items:baseline;color:var(--ink)}
+.slip .tot span:first-child{font-weight:600;letter-spacing:.06em}
+.slip .tot .num{font-size:1.25rem;font-weight:600;letter-spacing:-.02em}
+.slip .barcode{display:block;width:100%;height:42px;margin-top:4px}
+.slip .code{text-align:center;font-size:.64rem;letter-spacing:.3em;color:var(--muted);margin-top:-6px}
+.slip .thanks{text-align:center;color:var(--ink-2);font-size:.72rem;letter-spacing:.12em}
+.slip .empty-line{text-align:center;color:var(--muted);padding:10px 0}
+.stamp{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);border:2.5px solid var(--accent);color:var(--accent);font-family:var(--display);font-weight:700;letter-spacing:.14em;font-size:1.05rem;padding:6px 14px;border-radius:8px;opacity:.85;mix-blend-mode:multiply;pointer-events:none}
+.stamp[hidden]{display:none}
+.share-actions{display:flex;flex-direction:column;gap:10px;margin-top:-8px}
+.btn.done{background:var(--accent-ink);border-color:var(--accent-ink)}
+@media (prefers-reduced-motion:reduce){.slip.printing{animation:none}}
+
+/* ---------- Bottenmeny ---------- */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:rgba(255,255,255,.94);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);box-shadow:0 -1px 0 var(--line),0 -10px 30px -12px rgba(27,34,32,.10);padding-bottom:env(safe-area-inset-bottom,0px);transition:transform .25s cubic-bezier(.3,.7,.2,1)}
+.bar-inner{position:relative;max-width:520px;margin:0 auto;height:68px;display:flex;align-items:stretch;padding-inline:6px 100px}
+.bar-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;padding:0;color:var(--muted);font-size:.66rem;font-weight:600;letter-spacing:.01em;min-width:0;white-space:nowrap;touch-action:manipulation;transition:color .2s}
+.bar-item .pill-bg{display:grid;place-items:center;width:54px;height:30px;border-radius:99px;position:relative;transition:transform .15s}
+.bar-item .pill-bg::before{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--accent-soft);transform:scaleX(.4);opacity:0;transition:transform .3s cubic-bezier(.3,.7,.2,1),opacity .2s}
+.bar-item svg.i{width:22px;height:22px;position:relative;transition:stroke-width .2s}
+.bar-item:hover{color:var(--ink-2)}
+.bar-item:active .pill-bg{transform:scale(.9)}
+.bar-item[aria-current=page]{color:var(--ink)}
+.bar-item[aria-current=page] .pill-bg{color:var(--accent)}
+.bar-item[aria-current=page] .pill-bg::before{transform:none;opacity:1}
+.bar-item[aria-current=page] svg.i{stroke-width:2.1}
+.bar-item:focus-visible{outline:none}
+.bar-item:focus-visible .pill-bg{outline:2px solid var(--accent);outline-offset:2px}
+.fab{position:absolute;right:-72px;bottom:-72px;width:144px;height:144px;border-radius:50%;background:radial-gradient(circle at 28% 28%,#43897A,var(--accent) 62%);color:#fff;display:flex;align-items:flex-start;justify-content:flex-start;padding:30px 0 0 30px;cursor:pointer;touch-action:manipulation;box-shadow:0 0 0 4px var(--surface),0 0 0 11px rgba(47,107,92,.13),0 0 0 22px rgba(47,107,92,.06),0 -8px 24px -6px rgba(47,107,92,.35);transition:transform .2s cubic-bezier(.3,.7,.2,1),box-shadow .25s;transform-origin:100% 100%}
+.fab::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 4px rgba(47,107,92,.18);animation:sunGlow 3.6s ease-in-out infinite;pointer-events:none}
+@keyframes sunGlow{0%,100%{box-shadow:0 0 0 4px rgba(47,107,92,0)}50%{box-shadow:0 0 0 30px rgba(47,107,92,.07)}}
+.fab:hover{box-shadow:0 0 0 4px var(--surface),0 0 0 13px rgba(47,107,92,.16),0 0 0 26px rgba(47,107,92,.07),0 -8px 24px -6px rgba(47,107,92,.4)}
+.fab:active{transform:scale(.94)}
+.fab:focus-within{outline:2px solid var(--accent);outline-offset:6px}
+.fab svg.i{width:26px;height:26px;stroke-width:2;position:relative}
+body.kb .bar{transform:translateY(100%)}
+body.kb .fab{transform:translate(80px,80px)}
+@media (prefers-reduced-motion:reduce){.fab::after{animation:none}.bar,.fab,.bar-item .pill-bg::before{transition:none}}
+.fab input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;font-size:.86rem;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;white-space:nowrap;display:flex;align-items:center;gap:14px}
+.toast.has-action{padding:6px 6px 6px 16px}
+.toast.show.has-action{pointer-events:auto}
+.toast button{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:99px;padding:6px 13px;font-weight:600;font-size:.82rem}
+.toast button:hover{background:rgba(255,255,255,.22)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* Sidbyte */
+.view.enter{animation:viewIn .28s ease both}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}}
+
+/* Intro: ett kvitto skrivs ut ur en skrivare, sedan glider appen fram */
+#splash{position:fixed;inset:0;z-index:50;background:var(--paper);display:grid;place-items:center;animation:splashOut .45s ease 1.85s forwards;cursor:pointer}
+.sp{display:flex;flex-direction:column;align-items:center}
+.slot{width:96px;height:7px;border-radius:4px;background:var(--ink);position:relative;z-index:2;animation:slotIn .35s ease both}
+.clip{width:74px;height:104px;overflow:hidden;margin-top:-3px}
+.receipt{height:100%;background:var(--surface);border:1px solid var(--line);border-top:0;padding:16px 11px 20px;display:flex;flex-direction:column;gap:8px;transform:translateY(-100%);animation:print 1s cubic-bezier(.35,.75,.25,1) .3s forwards;clip-path:polygon(0 0,100% 0,100% 94%,91% 100%,82% 94%,73% 100%,64% 94%,55% 100%,46% 94%,37% 100%,28% 94%,19% 100%,10% 94%,0 100%)}
+.ln{display:block;height:3px;border-radius:2px;background:var(--line)}
+.ln.total{margin-top:auto;width:55%;align-self:flex-end;height:4px;background:var(--accent)}
+.sp-name{margin-top:22px;font-weight:700;font-size:1.3rem;letter-spacing:-.01em;opacity:0;animation:fadeUp .5s ease 1.05s forwards}
+@keyframes slotIn{from{transform:scaleX(.2);opacity:0}}
+@keyframes print{to{transform:translateY(0)}}
+@keyframes splashOut{to{opacity:0;visibility:hidden}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes barUp{from{transform:translateY(100%)}}
+@keyframes fabPop{0%{transform:translate(64px,64px)}70%{transform:translate(-3px,-3px)}100%{transform:none}}
+body.intro #view-hem > *{animation:fadeUp .55s ease both}
+body.intro #view-hem > :nth-child(1){animation-delay:2.05s}
+body.intro #view-hem > :nth-child(2){animation-delay:2.15s}
+body.intro #view-hem > :nth-child(3){animation-delay:2.25s}
+body.intro #view-hem > :nth-child(4){animation-delay:2.35s}
+body.intro #view-hem > :nth-child(5){animation-delay:2.45s}
+body.intro .bar{animation:barUp .5s cubic-bezier(.3,.7,.2,1) 2.1s both}
+body.intro .fab{animation:fabPop .45s ease 2.45s both}
+@media (prefers-reduced-motion:reduce){#splash{display:none}body.intro *,.view.enter{animation:none!important}.progress span,.stack span{transition:none}}
+@media (max-width:380px){.f{grid-template-columns:80px 1fr}}
+</style>
+</head>
+<body>
+
+
+<div id="splash" aria-hidden="true">
+  <div class="sp">
+    <div class="slot"></div>
+    <div class="clip">
+      <div class="receipt">
+        <span class="ln" style="width:60%"></span>
+        <span class="ln"></span>
+        <span class="ln" style="width:80%"></span>
+        <span class="ln"></span>
+        <span class="ln total"></span>
+      </div>
+    </div>
+    <div class="sp-name">Kvittoboken</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- Sida: Hem -->
+  <section class="view" id="view-hem" data-view="hem">
+    <header class="top">
+      <div>
+        <span class="date" id="todayLabel"></span>
+        <h1>Kvittoboken</h1>
+      </div>
+      <span class="sync" id="syncNote">Ansluter</span>
+    </header>
+
+    <section class="hero" aria-live="polite">
+      <div class="hero-main">
+        <div class="hero-head">
+          <span class="label">Att få tillbaka</span>
+          <span class="chip" id="owedChip">0 obetalda</span>
+        </div>
+        <div class="amount"><span id="owedKr">0</span><span class="ore" id="owedOre">,00</span><span class="kr">kr</span></div>
+      </div>
+      <div class="perf" aria-hidden="true"></div>
+      <p class="hero-note" id="heroNote">Inga obetalda utlägg</p>
+    </section>
+
+    <div class="list" id="list"></div>
+  </section>
+
+  <!-- Sida: Nytt / redigera utlägg -->
+  <section class="view" id="view-ny" data-view="ny" hidden aria-labelledby="editorTitle">
+    <header class="page-head">
+      <button type="button" class="back" id="cancelBtn" aria-label="Tillbaka">
+        <svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1 id="editorTitle">Nytt utlägg</h1>
+    </header>
+
+    <div class="scan-card" id="previewWrap" hidden>
+      <img id="previewImg" alt="Kvittobild">
+      <div class="status" id="scanStatus"></div>
+    </div>
+
+    <form id="form" novalidate style="display:flex;flex-direction:column;gap:22px">
+      <div class="amount-field">
+        <label class="label" for="fAmount">Belopp</label>
+        <div class="amount-input">
+          <input id="fAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00" required>
+          <span class="kr">kr</span>
+        </div>
+        <span class="underline"></span>
+      </div>
+
+      <div class="group-card">
+        <div class="f"><label for="fStore">Butik</label><input id="fStore" autocomplete="off" placeholder="t.ex. ICA Maxi Lindhagen" required></div>
+        <div class="f"><label for="fDate">Datum</label><input id="fDate" type="date" required></div>
+        <div class="f top"><label for="fNote">Anteckning</label><textarea id="fNote" rows="2" placeholder="Vad köptes, åt vem…"></textarea></div>
+      </div>
+
+      <span class="label section-label">Kategori</span>
+      <div class="chips" id="catChips" role="radiogroup" aria-label="Kategori"></div>
+
+      <span class="label section-label">Status</span>
+      <div class="toggle" role="radiogroup" aria-label="Status">
+        <input type="radio" name="status" id="stOwed" value="owed" checked><label for="stOwed">Ej återbetald</label>
+        <input type="radio" name="status" id="stPaid" value="paid"><label for="stPaid">Återbetald</label>
+      </div>
+
+      <p class="error" id="formError" hidden></p>
+      <div class="form-actions">
+        <button type="button" class="btn ghost-danger" id="deleteBtn" hidden>Ta bort</button>
+        <button type="submit" class="btn primary" id="saveBtn">Spara utlägg</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Sida: Historik -->
+  <section class="view" id="view-historik" data-view="historik" hidden>
+    <header class="page-head">
+      <button type="button" class="back" id="closeHistory" aria-label="Tillbaka">
+        <svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Historik</h1>
+    </header>
+    <section class="hist-sum">
+      <span class="label">Återbetalt totalt</span>
+      <div class="hist-amount num"><span id="paidTotal">0,00</span> <small>kr</small></div>
+      <span class="note" id="paidCount"></span>
+    </section>
+    <div class="list" id="historyList"></div>
+  </section>
+
+  <!-- Sida: Sammanställning -->
+  <section class="view" id="view-sammanstall" data-view="sammanstall" hidden>
+    <header class="page-head">
+      <button type="button" class="back" id="closeShare" aria-label="Tillbaka">
+        <svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Sammanställning</h1>
+    </header>
+    <p class="lead">Välj period, kopiera texten och skicka den till mamma och pappa.</p>
+
+    <div class="seg" role="tablist" aria-label="Period" id="periodSeg">
+      <button role="tab" data-p="alla" aria-selected="true">Allt obetalt</button>
+      <button role="tab" data-p="denna" aria-selected="false">Denna månad</button>
+      <button role="tab" data-p="forra" aria-selected="false">Förra månaden</button>
+    </div>
+
+    <div class="printer">
+      <div class="mouth" aria-hidden="true"></div>
+      <div class="feed">
+        <article class="slip" id="slip" aria-label="Sammanställning som kvitto">
+          <div class="brand">Kvittoboken</div>
+          <p class="center"><b>Utlägg att få tillbaka</b><br><span id="slipPeriod"></span></p>
+          <hr>
+          <div class="cols"><span>BUTIK</span><span>KR</span></div>
+          <ul id="slipList"></ul>
+          <hr>
+          <div class="kv"><span>Antal kvitton</span><span class="num" id="slipCount">0</span></div>
+          <hr class="double">
+          <div class="tot"><span>TOTALT</span><span class="num" id="shareTotal">0,00</span></div>
+          <hr>
+          <svg class="barcode" id="barcode" viewBox="0 0 200 42" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <p class="code num" id="slipCode"></p>
+          <p class="thanks">TACK MAMMA &amp; PAPPA!</p>
+          <div class="stamp" id="stamp" hidden>ALLT BETALT</div>
+        </article>
+      </div>
+    </div>
+
+    <div class="share-actions">
+      <button type="button" class="btn primary" id="copyBtn">
+        <svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        <span>Kopiera text</span>
+      </button>
+      <button type="button" class="btn" id="markAllPaid">Markera som återbetalda</button>
+      <textarea id="shareText" class="sr" readonly tabindex="-1" aria-hidden="true"></textarea>
+      <button type="button" class="hist-link" id="historyBtn">
+        <span class="hl-ico"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
+        <span class="hl-text"><b>Historik</b><small id="historyHint">Återbetalda utlägg</small></span>
+        <svg class="i chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </section>
+</div>
+
+<nav class="bar" aria-label="Meny">
+  <div class="bar-inner">
+    <button type="button" class="bar-item" id="homeBtn" aria-current="page">
+      <span class="pill-bg"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></span>
+      <span>Utlägg</span>
+    </button>
+    <button type="button" class="bar-item" id="manualBtn">
+      <span class="pill-bg"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span>Manuellt</span>
+    </button>
+    <button type="button" class="bar-item" id="shareBtn">
+      <span class="pill-bg"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h8"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg></span>
+      <span>Sammanställ</span>
+    </button>
+  </div>
+  <label class="fab" id="scanBtn" title="Skanna kvitto">
+      <svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/></svg>
+      <span class="sr">Skanna kvitto</span>
+      <input type="file" id="photoInput" accept="image/*" capture="environment">
+    </label>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fmt = n => (Number(n)||0).toLocaleString("sv-SE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const today = () => { const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
+const MONTHS = ["januari","februari","mars","april","maj","juni","juli","augusti","september","oktober","november","december"];
+const sum = arr => arr.reduce((s,x)=>s+(+x.amount||0),0);
+
+const CATS = {
+  "Mat":      {k:"mat",  icon:'<path d="M5 8h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'},
+  "Hushåll":  {k:"hush", icon:'<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/>'},
+  "Apotek":   {k:"apo",  icon:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>'},
+  "Transport":{k:"tra",  icon:'<path d="M5 16V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v8"/><path d="M4 16h16v2H4z"/><path d="M8 18v2M16 18v2M5 11h14"/>'},
+  "Present":  {k:"pre",  icon:'<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11"/><path d="M12 9c-2-4-6-4-6-1.5S9 9 12 9c3 0 6-.5 6-1.5S14 5 12 9z"/>'},
+  "Övrigt":   {k:"ovr",  icon:'<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>'},
+};
+const catOf = c => CATS[c] ? c : "Övrigt";
+const catIcon = c => `<svg class="i" viewBox="0 0 24 24">${CATS[catOf(c)].icon}</svg>`;
+const catVar = (c, bg) => `var(--c-${CATS[catOf(c)].k}${bg?"-bg":""})`;
+
+
+let items = [];
+let dbReady = false;
+let db = null, col = null, sample = null, imgOk = false;
+let editingId = null;
+let pendingThumb = null;
+let editorPrepared = false;
+let view = "hem";
+
+function toast(msg, action){
+  const t = $("#toast"); t.textContent = "";
+  const m = document.createElement("span"); m.textContent = msg; t.append(m);
+  if (action){
+    const b = document.createElement("button"); b.type = "button"; b.textContent = action.label;
+    b.addEventListener("click", () => { t.classList.remove("show"); action.fn(); });
+    t.append(b);
+  }
+  t.classList.toggle("has-action", !!action);
+  t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("show"), action ? 4500 : 2200);
+}
+
+{ const d = new Date();
+  $("#todayLabel").textContent = d.toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long"}); }
+
+// ---------- Sidor ----------
+const VIEWS = ["hem","ny","sammanstall","historik"];
+const NAV = {hem:"#homeBtn", ny:"#manualBtn", sammanstall:"#shareBtn", historik:"#shareBtn"};
+function showView(v){
+  if (!VIEWS.includes(v)) v = "hem";
+  if (v === "ny" && !editorPrepared) { openEditor(null); return; }
+  if (v !== "ny") editorPrepared = false;
+  const changed = v !== view;
+  view = v;
+  document.querySelectorAll(".view").forEach(el => {
+    el.hidden = el.dataset.view !== v;
+    el.classList.remove("enter");
+  });
+  if (changed && !document.body.classList.contains("intro")) {
+    const el = $("#view-"+v); void el.offsetWidth; el.classList.add("enter");
+  }
+  document.querySelectorAll(".bar-item").forEach(b => b.removeAttribute("aria-current"));
+  const special = v === "ny" && (editingId || pendingThumb);
+  if (!special) $(NAV[v])?.setAttribute("aria-current","page");
+  if (v === "sammanstall") renderSummary(changed);
+  window.scrollTo(0,0);
+  if (v === "ny" && !pendingThumb && !editingId) setTimeout(()=>$("#fAmount").focus({preventScroll:true}),200);
+}
+function go(v){
+  if ((location.hash.slice(1) || "hem") === v) showView(v);
+  else location.hash = v;
+}
+window.addEventListener("hashchange", () => showView(location.hash.slice(1) || "hem"));
+
+// ---------- Hem ----------
+function render(){
+  const src = items;
+  const owed = src.filter(x=>x.status!=="paid"), paid = src.filter(x=>x.status==="paid");
+  const owedSum = sum(owed), paidSum = sum(paid);
+
+  setAmount(owedSum);
+  const note = $("#heroNote"); note.textContent = "";
+  if (owed.length){
+    const oldest = owed.reduce((a,b) => (a.date||"9") < (b.date||"9") ? a : b);
+    const days = oldest.date ? Math.round((new Date(today()+"T12:00") - new Date(oldest.date+"T12:00")) / 864e5) : null;
+    const a = document.createElement("span"); a.append("Äldsta ");
+    const b = document.createElement("b"); b.textContent = relDay(oldest.date); a.append(b);
+    note.append(a);
+    if (days > 1){ const dot = document.createElement("span"); dot.className = "dotsep"; const c = document.createElement("span"); c.textContent = `${days} dagar sedan`; note.append(dot, c); }
+  } else {
+    note.textContent = items.length ? "Allt är återbetalt" : "Inga obetalda utlägg";
+  }
+  const chip = $("#owedChip");
+  chip.textContent = owed.length ? `${owed.length} ${owed.length===1?"obetalt":"obetalda"}` : "Allt återbetalt";
+  chip.classList.toggle("ok", !owed.length);
+  chip.hidden = !src.length;
+
+  // Historik
+  $("#paidTotal").textContent = fmt(paidSum);
+  $("#historyHint").textContent = paid.length ? `${paid.length} återbetalda · ${fmt(paidSum)} kr` : "Återbetalda utlägg hamnar här";
+  $("#paidCount").textContent = paid.length ? (paid.length===1 ? "1 kvitto återbetalt" : `${paid.length} kvitton återbetalda`) : "";
+  renderList($("#historyList"), paid, "paid", src.length);
+
+  // Lista
+  renderList($("#list"), owed, "owed", src.length);
+}
+
+// Beloppet räknar mjukt till sitt nya värde
+let shownAmount = 0;
+function setAmount(v){
+  const paint = n => { const [kr, ore] = fmt(n).split(","); $("#owedKr").textContent = kr; $("#owedOre").textContent = ","+ore; };
+  const from = shownAmount; shownAmount = v;
+  cancelAnimationFrame(setAmount._r);
+  if (from === v || matchMedia("(prefers-reduced-motion:reduce)").matches){ paint(v); return; }
+  const t0 = performance.now(), dur = 650;
+  const step = t => { const k = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-k,3); paint(from + (v-from)*e); if (k<1) setAmount._r = requestAnimationFrame(step); };
+  setAmount._r = requestAnimationFrame(step);
+}
+function relDay(d){
+  if (!d) return "—";
+  const diff = Math.round((new Date(today()+"T12:00") - new Date(d+"T12:00")) / 864e5);
+  if (diff === 0) return "Idag";
+  if (diff === 1) return "Igår";
+  return new Date(d+"T12:00").toLocaleDateString("sv-SE",{day:"numeric",month:"short"});
+}
+function monthLabel(m){
+  const [y,mo] = m.split("-");
+  if (!mo) return "Utan datum";
+  return +y === new Date().getFullYear() ? MONTHS[+mo-1] : `${MONTHS[+mo-1]} ${y}`;
+}
+
+function renderList(list, xsAll, kind, totalCount){
+  list.textContent = "";
+  const rows = xsAll.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.created||0)-(a.created||0));
+
+  if (!rows.length){
+    const e = document.createElement("div"); e.className = "empty";
+    const mini = document.createElement("div"); mini.className = "mini";
+    const s = document.createElement("strong");
+    const p = document.createElement("span");
+    if (!dbReady){ s.textContent = "Hämtar dina utlägg…"; p.textContent = ""; }
+    else if (kind==="paid"){ s.textContent = "Ingen historik än"; p.textContent = "När du markerar ett utlägg som återbetalt flyttas det hit."; }
+    else if (!totalCount){ s.textContent = "Inga utlägg än"; p.textContent = "Tryck på den gröna knappen för att skanna ett kvitto, eller välj Manuellt."; }
+    else { s.textContent = "Allt är återbetalt"; p.textContent = "Återbetalda utlägg finns under Historik."; }
+    e.append(mini,s,p); list.append(e); return;
+  }
+
+  const groups = new Map();
+  for (const x of rows){ const m = (x.date||"").slice(0,7); if(!groups.has(m)) groups.set(m,[]); groups.get(m).push(x); }
+  for (const [m, xs] of groups){
+    const g = document.createElement("section"); g.className = "group";
+    const h = document.createElement("div"); h.className = "group-head";
+    const a = document.createElement("span"); a.className = "label"; a.textContent = monthLabel(m);
+    const b = document.createElement("span"); b.className = "num"; b.textContent = fmt(sum(xs))+" kr";
+    h.append(a,b);
+    const ul = document.createElement("ul"); ul.className = "card-list";
+    for (const x of xs) ul.append(rowEl(x));
+    g.append(h,ul); list.append(g);
+  }
+}
+
+function rowEl(x){
+  const paid = x.status === "paid";
+  const li = document.createElement("li");
+  li.className = "row" + (paid ? " is-paid" : "");
+  li.tabIndex = 0;
+  const ico = document.createElement("div"); ico.className = "ico";
+  if (x.thumb){ const im = document.createElement("img"); im.src = x.thumb; im.alt = ""; ico.append(im); ico.style.border = "1px solid var(--line)"; }
+  else { ico.innerHTML = catIcon(x.category); ico.style.background = catVar(x.category,true); ico.style.color = catVar(x.category); }
+  const meta = document.createElement("div"); meta.className = "meta";
+  const st = document.createElement("span"); st.className = "store"; st.textContent = x.store || "Okänd butik";
+  const sub = document.createElement("span"); sub.className = "sub";
+  sub.textContent = [relDay(x.date), x.note || catOf(x.category)].filter(Boolean).join(" · ");
+  meta.append(st,sub);
+  const amt = document.createElement("div"); amt.className = "amt";
+  const v = document.createElement("span"); v.className = "num"; v.textContent = fmt(x.amount);
+  const kr = document.createElement("small"); kr.textContent = "kr";
+  amt.append(v,kr);
+  const c = document.createElement("button"); c.type = "button";
+  c.className = "check" + (paid ? " on" : "");
+  c.innerHTML = '<svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  c.setAttribute("aria-label", paid ? `Flytta ${x.store||"utlägget"} tillbaka till obetalda` : `Markera ${x.store||"utlägget"} som återbetalt`);
+  c.addEventListener("click", e => { e.stopPropagation(); toggleStatus(x, li, c); });
+  li.append(ico,meta,amt,c);
+  const open = () => openEditor(x);
+  li.addEventListener("click", open);
+  li.addEventListener("keydown", e => { if(e.key==="Enter" && e.target===li) open(); });
+  return li;
+}
+
+// ---------- Formulär ----------
+{ const wrap = $("#catChips");
+  for (const c of Object.keys(CATS)){
+    const id = "cat-"+CATS[c].k;
+    const inp = document.createElement("input"); inp.type="radio"; inp.name="cat"; inp.id=id; inp.value=c;
+    const lab = document.createElement("label"); lab.htmlFor = id;
+    const dot = document.createElement("span"); dot.className="dot"; dot.innerHTML = catIcon(c);
+    dot.style.background = catVar(c,true); dot.style.color = catVar(c);
+    lab.append(dot, document.createTextNode(c));
+    wrap.append(inp,lab);
+  } }
+const setCat = c => { const r = document.querySelector(`input[name=cat][value="${catOf(c)}"]`); if (r) r.checked = true; };
+const getCat = () => document.querySelector("input[name=cat]:checked")?.value || "Övrigt";
+const setStatus = s => { (s==="paid" ? $("#stPaid") : $("#stOwed")).checked = true; };
+const getStatus = () => $("#stPaid").checked ? "paid" : "owed";
+
+function openEditor(x, opts={}){
+  editingId = x?.id || null;
+  pendingThumb = x?.thumb || null;
+  $("#editorTitle").textContent = opts.scanning ? "Skannat kvitto" : editingId ? "Redigera utlägg" : "Nytt utlägg";
+  $("#fStore").value = x?.store || "";
+  $("#fAmount").value = x?.amount != null ? Number(x.amount).toFixed(2) : "";
+  $("#fDate").value = x?.date || today();
+  setCat(x?.category || "Mat");
+  setStatus(x?.status || "owed");
+  $("#fNote").value = x?.note || "";
+  $("#deleteBtn").hidden = !editingId;
+  $("#deleteBtn").dataset.confirm = "";
+  $("#deleteBtn").textContent = "Ta bort";
+  $("#formError").hidden = true;
+  $("#previewWrap").hidden = !pendingThumb;
+  if (pendingThumb) $("#previewImg").src = pendingThumb;
+  if (!opts.scanning) $("#scanStatus").textContent = "";
+  editorPrepared = true;
+  go("ny");
+}
+function closeEditor(){ editingId = null; pendingThumb = null; $("#photoInput").value=""; go("hem"); }
+$("#manualBtn").addEventListener("click", () => openEditor(null));
+$("#cancelBtn").addEventListener("click", closeEditor);
+
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const amount = parseFloat(String($("#fAmount").value).replace(",","."));
+  const store = $("#fStore").value.trim();
+  const err = $("#formError");
+  if (!(amount>0)){ err.textContent = "Skriv ett belopp större än 0."; err.hidden = false; $("#fAmount").focus(); return; }
+  if (!store){ err.textContent = "Skriv vilken butik du handlade i."; err.hidden = false; $("#fStore").focus(); return; }
+  if (!$("#fDate").value){ err.textContent = "Välj ett datum."; err.hidden = false; return; }
+  if (!col){ err.textContent = "Utlägget kunde inte sparas."; err.hidden=false; return; }
+  const doc = {
+    store, amount: Math.round(amount*100)/100, date: $("#fDate").value,
+    category: getCat(), status: getStatus(),
+    note: $("#fNote").value.trim(), thumb: pendingThumb || null,
+  };
+  $("#saveBtn").disabled = true;
+  try{
+    if (editingId) await col.doc(editingId).update(doc);
+    else await col.add({...doc, created: Date.now()});
+    toast(editingId ? "Utlägget är uppdaterat" : "Utlägget är sparat");
+    closeEditor();
+  }catch(ex){
+    err.textContent = "Kunde inte spara: " + (ex?.message || ex?.code || "okänt fel");
+    err.hidden = false;
+  }finally{ $("#saveBtn").disabled = false; }
+});
+
+$("#deleteBtn").addEventListener("click", async () => {
+  const b = $("#deleteBtn");
+  if (!b.dataset.confirm){ b.dataset.confirm="1"; b.textContent="Tryck igen för att ta bort"; return; }
+  try{ await col.doc(editingId).delete(); toast("Utlägget är borttaget"); closeEditor(); }
+  catch(ex){ $("#formError").textContent="Kunde inte ta bort: "+(ex?.message||ex?.code); $("#formError").hidden=false; }
+});
+
+function collapseRow(li){
+  return new Promise(res => {
+    if (!li || matchMedia("(prefers-reduced-motion:reduce)").matches) return res();
+    li.style.height = li.offsetHeight + "px"; void li.offsetHeight;
+    li.classList.add("collapse"); li.style.height = "0px";
+    setTimeout(res, 320);
+  });
+}
+async function setStatus2(id, status){ if (col) await col.doc(id).update({status}); }
+async function toggleStatus(x, li, btn){
+  if (!col){ toast("Databasen är inte ansluten"); return; }
+  const to = x.status === "paid" ? "owed" : "paid";
+  if (btn) btn.classList.toggle("on", to === "paid");
+  await new Promise(r => setTimeout(r, to === "paid" ? 260 : 120));
+  await collapseRow(li);
+  try{
+    await setStatus2(x.id, to);
+    toast(to === "paid" ? "Flyttad till Historik" : "Flyttad till obetalda", {
+      label: "Ångra",
+      fn: () => setStatus2(x.id, x.status).catch(() => toast("Kunde inte ångra")),
+    });
+  }catch(ex){ toast("Kunde inte ändra status"); render(); }
+}
+
+// ---------- Skanning ----------
+// Textigenkänning direkt i webbläsaren (Tesseract.js, svenska).
+let ocrWorker = null;
+function loadScript(src){
+  return new Promise((res, rej) => { const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = rej; document.head.append(el); });
+}
+async function ocr(canvas){
+  // Gråskala och kontrast hjälper på termopapper
+  const g = canvas.getContext("2d"), d = g.getImageData(0,0,canvas.width,canvas.height), p = d.data;
+  for (let i = 0; i < p.length; i += 4){
+    const y = .299*p[i] + .587*p[i+1] + .114*p[i+2];
+    const v = Math.max(0, Math.min(255, (y-128)*1.5 + 128));
+    p[i] = p[i+1] = p[i+2] = v;
+  }
+  g.putImageData(d,0,0);
+  if (!window.Tesseract) await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+  if (!ocrWorker){
+    ocrWorker = await Tesseract.createWorker("swe", 1, {
+      logger: m => { if (m.status === "recognizing text") setScanStatus(`Läser kvittot… ${Math.round(m.progress*100)} %`, "Butik, belopp och datum fylls i automatiskt.", true); }
+    });
+  }
+  const { data } = await ocrWorker.recognize(canvas);
+  return data.text || "";
+}
+
+const CHAINS = [
+  ["ICA","Mat"],["Coop","Mat"],["Willys","Mat"],["Hemköp","Mat"],["Lidl","Mat"],["City Gross","Mat"],["Netto","Mat"],["Tempo","Mat"],["Pressbyrån","Mat"],["7-Eleven","Mat"],["Systembolaget","Mat"],
+  ["Apotek Hjärtat","Apotek"],["Apoteket","Apotek"],["Kronans Apotek","Apotek"],["Apotea","Apotek"],["Apotek","Apotek"],
+  ["Circle K","Transport"],["Preem","Transport"],["OKQ8","Transport"],["Shell","Transport"],["St1","Transport"],["Ingo","Transport"],["SJ","Transport"],["SL","Transport"],["Parkering","Transport"],
+  ["Clas Ohlson","Hushåll"],["IKEA","Hushåll"],["Jula","Hushåll"],["Biltema","Hushåll"],["Rusta","Hushåll"],["Byggmax","Hushåll"],["Bauhaus","Hushåll"],["Normal","Hushåll"],["Lager 157","Hushåll"],["Elgiganten","Hushåll"],["Åhléns","Hushåll"],["Granit","Hushåll"],
+];
+function parseReceipt(text){
+  const lines = text.split(/\r?\n/).map(l => l.replace(/\s+/g," ").trim()).filter(Boolean);
+  const money = /(\d{1,3}(?:[ .]\d{3})*|\d+)\s?[,.]\s?(\d{2})(?!\d)/g;
+  const amountsIn = l => [...l.matchAll(money)].map(m => parseFloat(m[1].replace(/[ .]/g,"") + "." + m[2]));
+
+  // Belopp: rader med totalnyckelord, annars största beloppet
+  let amount = null;
+  const keys = [/att\s*betala/i, /totalt/i, /\btotal\b/i, /summa/i, /\bkort\b|betalkort|mastercard|visa/i, /belopp/i];
+  for (const k of keys){
+    const hit = lines.filter(l => k.test(l) && !/moms|netto|exkl/i.test(l)).map(amountsIn).find(a => a.length);
+    if (hit){ amount = hit[hit.length-1]; break; }
+  }
+  if (amount == null){
+    const all = lines.filter(l => !/moms|org|tel|kvitto\s*nr/i.test(l)).flatMap(amountsIn).filter(v => v < 100000);
+    if (all.length) amount = Math.max(...all);
+  }
+
+  // Datum
+  let date = null;
+  const now = new Date();
+  const ok = (y,m,d) => { const t = new Date(y, m-1, d); return m>=1 && m<=12 && d>=1 && d<=31 && t <= new Date(now.getTime()+864e5) && y > 2000; };
+  const pad = n => String(n).padStart(2,"0");
+  for (const l of lines){
+    let m = l.match(/(20\d{2})[-.\/ ](\d{1,2})[-.\/ ](\d{1,2})/);
+    if (m && ok(+m[1],+m[2],+m[3])){ date = `${m[1]}-${pad(m[2])}-${pad(m[3])}`; break; }
+    m = l.match(/\b(\d{1,2})[-.\/](\d{1,2})[-.\/](20\d{2}|\d{2})\b/);
+    if (m){ const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; if (ok(y,+m[2],+m[1])){ date = `${y}-${pad(m[2])}-${pad(m[1])}`; break; } }
+    m = l.match(/\b(\d{2})(\d{2})(\d{2})\b/);
+    if (m && /datum|date|tid/i.test(l)){ const y = 2000 + +m[1]; if (ok(y,+m[2],+m[3])){ date = `${y}-${m[2]}-${m[3]}`; break; } }
+  }
+
+  // Butik: känd kedja, annars första rimliga raden högst upp
+  let store = null, category = "Övrigt";
+  const head = lines.slice(0, 8).join(" ");
+  for (const [name, cat] of CHAINS){
+    const re = new RegExp("(^|[^a-zåäö])" + name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + "([^a-zåäö]|$)", "i");
+    if (re.test(head)){
+      category = cat;
+      const line = lines.slice(0, 8).find(l => re.test(l));
+      store = line && line.length <= 40 && !/\d{3,}/.test(line) ? line.replace(/[^\p{L}\d &'.-]/gu,"").trim() : name;
+      break;
+    }
+  }
+  if (!store){
+    const cand = lines.slice(0, 6).find(l => (l.match(/\p{L}/gu)||[]).length >= 3 && !/\d{4,}|org|tel|www|kvitto/i.test(l) && l.length <= 40);
+    if (cand) store = cand.replace(/[^\p{L}\d &'.-]/gu,"").trim();
+  }
+  if (store) store = store.replace(/\b(\p{Lu})(\p{Lu}+)\b/gu, (w, a, b) => w.length <= 4 ? w : a + b.toLowerCase());
+  return { store, amount, date, category };
+}
+
+function loadImage(file){
+  return new Promise((res,rej)=>{ const u=URL.createObjectURL(file); const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=u; });
+}
+function resize(img, max){
+  const s = Math.min(1, max/Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.naturalWidth*s); c.height = Math.round(img.naturalHeight*s);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return c;
+}
+function setScanStatus(main, sub, loading){
+  const s = $("#scanStatus"); s.textContent = "";
+  const a = document.createElement("span");
+  if (loading){ const sp = document.createElement("span"); sp.className = "spinner"; a.append(sp); }
+  a.append(document.createTextNode(main));
+  s.append(a);
+  if (sub){ const b = document.createElement("small"); b.textContent = sub; s.append(b); }
+}
+
+$("#photoInput").addEventListener("change", async e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  let img;
+  try{ img = await loadImage(file); }catch{ toast("Bilden gick inte att läsa"); return; }
+  const thumb = resize(img, 360).toDataURL("image/jpeg", 0.6);
+  openEditor({thumb}, {scanning:true});
+  setScanStatus("Läser kvittot…", "Första gången tar det lite längre tid.", true);
+  try{
+    const text = await ocr(resize(img, 1800));
+    const r = parseReceipt(text);
+    if (r.store) $("#fStore").value = r.store;
+    if (r.amount != null) $("#fAmount").value = r.amount.toFixed(2);
+    if (r.date) $("#fDate").value = r.date;
+    setCat(r.category);
+    const found = [r.store && "butik", r.amount != null && "belopp", r.date && "datum"].filter(Boolean);
+    if (found.length) setScanStatus("Kvittot är avläst", `Hittade ${found.join(", ")}. Kontrollera uppgifterna och spara.`);
+    else setScanStatus("Kunde inte läsa kvittot", "Fyll i uppgifterna manuellt. Ett skarpt foto rakt ovanifrån fungerar bäst.");
+  }catch(ex){
+    setScanStatus("Kvittot gick inte att läsa av", "Fyll i uppgifterna manuellt.");
+  }
+});
+
+// ---------- Sammanställning ----------
+let period = "alla";
+const ym = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+function periodInfo(){
+  const now = new Date();
+  if (period === "denna") return { key: ym(now), label: `${MONTHS[now.getMonth()]} ${now.getFullYear()}` };
+  if (period === "forra"){ const d = new Date(now.getFullYear(), now.getMonth()-1, 1); return { key: ym(d), label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` }; }
+  return { key: null, label: "Allt obetalt" };
+}
+function owedSorted(){
+  const { key } = periodInfo();
+  return items.filter(x => x.status!=="paid" && (!key || (x.date||"").slice(0,7) === key))
+    .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+}
+const shortDate = d => d ? new Date(d+"T12:00").toLocaleDateString("sv-SE",{day:"numeric",month:"short"}) : "";
+function buildSummary(){
+  const owed = owedSorted(), { key, label } = periodInfo();
+  if (!owed.length) return "Inga obetalda utlägg.";
+  const lines = owed.map(x => `${shortDate(x.date)} · ${x.store || "Okänd butik"}${x.note ? " ("+x.note+")" : ""} – ${fmt(x.amount)} kr`);
+  return `Utlägg att få tillbaka${key ? " – "+label : ""}\n\n${lines.join("\n")}\n\nTotalt: ${fmt(sum(owed))} kr (${owed.length} ${owed.length===1?"kvitto":"kvitton"})`;
+}
+function drawBarcode(seed){
+  const svg = $("#barcode"); svg.textContent = "";
+  let h = 2166136261; for (const ch of seed) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+  let x = 6;
+  while (x < 194){
+    const w = 1 + Math.floor(rnd()*3);
+    if (x + w > 194) break;
+    const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    r.setAttribute("x", x); r.setAttribute("y", 0); r.setAttribute("width", w); r.setAttribute("height", 42);
+    r.setAttribute("fill", "var(--ink)"); svg.append(r);
+    x += w + 1 + Math.floor(rnd()*3);
+  }
+}
+function renderSummary(print){
+  const owed = owedSorted(), total = sum(owed), { label } = periodInfo();
+  $("#shareText").value = buildSummary();
+  $("#shareTotal").textContent = fmt(total);
+  $("#slipCount").textContent = owed.length;
+  const now = new Date();
+  $("#slipPeriod").textContent = (period === "alla" ? "" : label + " · ") + now.toLocaleDateString("sv-SE",{day:"numeric",month:"short",year:"numeric"}) + " " + now.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+  const ul = $("#slipList"); ul.textContent = "";
+  if (!owed.length){ const li = document.createElement("li"); li.className = "empty-line"; li.textContent = period === "alla" ? "Inga obetalda utlägg" : "Inga obetalda utlägg den här perioden"; ul.append(li); }
+  for (const x of owed){
+    const li = document.createElement("li");
+    const line = document.createElement("div"); line.className = "line";
+    const n = document.createElement("span"); n.className = "n"; n.textContent = x.store || "Okänd butik";
+    const dots = document.createElement("span"); dots.className = "dots";
+    const a = document.createElement("span"); a.className = "num"; a.textContent = fmt(x.amount);
+    line.append(n,dots,a);
+    const d = document.createElement("span"); d.className = "d"; d.textContent = [shortDate(x.date), catOf(x.category), x.note].filter(Boolean).join(" · ");
+    li.append(line,d); ul.append(li);
+  }
+  const cents = String(Math.round(total*100)).padStart(6,"0");
+  $("#slipCode").textContent = `${ym(now).replace("-","")} ${String(owed.length).padStart(2,"0")} ${cents}`;
+  drawBarcode(cents + owed.map(x=>x.id).join(""));
+  $("#stamp").hidden = !(owed.length === 0 && items.some(x=>x.status==="paid") && period === "alla");
+  const mb = $("#markAllPaid");
+  mb.hidden = !owed.length; mb.dataset.confirm = "";
+  mb.textContent = owed.length === 1 ? "Markera som återbetald" : `Markera alla ${owed.length} som återbetalda`;
+  $("#copyBtn").disabled = !owed.length;
+  if (print){ const s = $("#slip"); s.classList.remove("printing"); void s.offsetWidth; s.classList.add("printing"); }
+}
+{ const now = new Date(), prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+  $('#periodSeg [data-p="denna"]').textContent = cap(MONTHS[now.getMonth()]);
+  $('#periodSeg [data-p="forra"]').textContent = cap(MONTHS[prev.getMonth()]); }
+document.querySelectorAll("#periodSeg button").forEach(b => b.addEventListener("click", () => {
+  period = b.dataset.p;
+  document.querySelectorAll("#periodSeg button").forEach(o => o.setAttribute("aria-selected", o===b));
+  renderSummary(true);
+}));
+$("#shareBtn").addEventListener("click", () => go("sammanstall"));
+$("#homeBtn").addEventListener("click", () => { if (view === "hem") window.scrollTo({top:0,behavior:"smooth"}); else go("hem"); });
+$("#closeShare").addEventListener("click", () => go("hem"));
+$("#historyBtn").addEventListener("click", () => go("historik"));
+$("#closeHistory").addEventListener("click", () => go("sammanstall"));
+$("#copyBtn").addEventListener("click", () => {
+  const btn = $("#copyBtn"), lab = btn.querySelector("span");
+  const text = $("#shareText").value;
+  navigator.clipboard.writeText(text).then(()=>{
+    lab.textContent = "Kopierat"; btn.classList.add("done");
+    clearTimeout(btn._t); btn._t = setTimeout(()=>{ lab.textContent = "Kopiera text"; btn.classList.remove("done"); }, 2000);
+  }, ()=>{
+    const ta = $("#shareText"); ta.classList.remove("sr"); ta.style.cssText = "width:100%;min-height:140px;font-family:var(--mono);font-size:.78rem;border:1px solid var(--line);border-radius:10px;padding:10px";
+    ta.removeAttribute("aria-hidden"); ta.focus(); ta.select(); toast("Markerat, kopiera med Ctrl/Cmd+C");
+  });
+});
+$("#markAllPaid").addEventListener("click", async () => {
+  const b = $("#markAllPaid");
+  if (!b.dataset.confirm){ b.dataset.confirm="1"; b.textContent="Tryck igen för att bekräfta"; return; }
+  if (!col) return;
+  const owed = owedSorted();
+  b.disabled = true;
+  for (const x of owed){ try{ await col.doc(x.id).update({status:"paid"}); }catch{} }
+  b.disabled = false;
+  toast(owed.length === 1 ? "1 utlägg flyttat till Historik" : `${owed.length} utlägg flyttade till Historik`);
+});
+
+// Dölj menyn när tangentbordet är uppe på mobilen
+const isField = el => el && el.matches && el.matches("input:not([type=radio]):not([type=file]),textarea");
+document.addEventListener("focusin", e => { if (isField(e.target) && matchMedia("(max-width:700px)").matches) document.body.classList.add("kb"); });
+document.addEventListener("focusout", () => setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove("kb"); }, 50));
+document.querySelectorAll(".bar-item").forEach(b => b.addEventListener("click", () => { try{ navigator.vibrate?.(8); }catch{} }));
+
+// ---------- Intro ----------
+document.body.classList.add("intro");
+const endSplash = () => { $("#splash")?.remove(); };
+$("#splash").addEventListener("click", () => { endSplash(); document.body.classList.remove("intro"); });
+$("#splash").addEventListener("animationend", e => { if (e.animationName === "splashOut") endSplash(); });
+setTimeout(endSplash, 2600);
+setTimeout(() => document.body.classList.remove("intro"), 3200);
+
+// ---------- Anslutning ----------
+render();
+showView(location.hash.slice(1) || "hem");
+// Utläggen sparas i den här webbläsaren (localStorage)
+const KEY = "kvittoboken.utlagg.v1";
+const listeners = [];
+function loadAll(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]"); }catch{ return []; } }
+let store = loadAll();
+function persist(){
+  try{ localStorage.setItem(KEY, JSON.stringify(store)); return true; }
+  catch(ex){ toast("Lagringen är full. Ta bort gamla kvitton."); throw ex; }
+}
+function emit(){
+  const snap = { docs: store.map(x => ({ id: x.id, data: () => { const { id, ...rest } = x; return rest; } })) };
+  listeners.forEach(fn => fn(snap));
+}
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+col = {
+  add: async d => { const x = { id: newId(), ...d }; store.push(x); persist(); emit(); return { id: x.id }; },
+  doc: id => ({
+    update: async d => { const x = store.find(y => y.id === id); if (!x) throw new Error("Hittades inte"); Object.assign(x, d); persist(); emit(); },
+    delete: async () => { store = store.filter(y => y.id !== id); persist(); emit(); },
+  }),
+  onSnapshot: fn => { listeners.push(fn); fn({ docs: store.map(x => ({ id: x.id, data: () => { const { id, ...rest } = x; return rest; } })) }); },
+};
+window.addEventListener("storage", e => { if (e.key === KEY){ store = loadAll(); emit(); } });
+{
+  const note = $("#syncNote");
+  let canSave = true;
+  try{ localStorage.setItem(KEY + ".test", "1"); localStorage.removeItem(KEY + ".test"); }catch{ canSave = false; }
+  note.textContent = canSave ? "Sparas på enheten" : "Sparas inte";
+  note.className = "sync " + (canSave ? "ok" : "err");
+  col.onSnapshot(snap => {
+    items = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    dbReady = true;
+    render();
+    if (view === "sammanstall") renderSummary();
+  });
+}
+</script>
+
+</body>
+</html>
